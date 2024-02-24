@@ -1,6 +1,5 @@
 val ktor_version: String by project
 val exposed_version: String by project
-val h2_version: String by project
 
 plugins {
     kotlin("jvm") version "1.9.22"
@@ -10,7 +9,7 @@ plugins {
 }
 
 group = "io.ileukocyte"
-version = "1.0.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
@@ -36,4 +35,17 @@ fun ktor(module: String, version: String) = "io.ktor:ktor-$module:$version"
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.jar {
+    manifest.attributes["Main-Class"] = "io.ileukocyte.dbs.MainKt"
+
+    val dependencies = configurations
+        .runtimeClasspath
+        .get()
+        .map(::zipTree)
+
+    from(dependencies)
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
