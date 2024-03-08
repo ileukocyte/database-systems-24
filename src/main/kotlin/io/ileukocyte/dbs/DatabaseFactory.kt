@@ -1,5 +1,7 @@
 package io.ileukocyte.dbs
 
+import io.ileukocyte.dbs.entities.ClosedPost
+import io.ileukocyte.dbs.entities.Post
 import io.ileukocyte.dbs.entities.User
 
 import org.jetbrains.exposed.sql.Database
@@ -129,7 +131,7 @@ object DatabaseFactory {
         }
     }
 
-    fun getPostsByDuration(minutes: Int, limit: Int?) {
+    fun getPostsByDuration(minutes: Int, limit: Int?): List<ClosedPost>? {
         return transaction {
             val sqlQuery = """
                 SELECT *
@@ -144,14 +146,23 @@ object DatabaseFactory {
             """.trimIndent()
 
             exec(sqlQuery) { rs ->
-                //rs.asList { getDouble("ct") }
+                rs.asList {
+                    ClosedPost(
+                        getInt("id"),
+                        getTimestamp("creationdate"),
+                        getInt("viewcount"),
+                        getTimestamp("lasteditdate"),
+                        getTimestamp("lastactivitydate"),
+                        getString("title"),
+                        getTimestamp("closeddate"),
+                        getDouble("duration")
+                    )
+                }
             }
-
-            TODO()
         }
     }
 
-    fun searchPosts(query: String, limit: Int?) {
+    fun searchPosts(query: String, limit: Int?): List<Post>? {
         return transaction {
             val sqlQuery = """
                 SELECT posts.id, creationdate, viewcount, lasteditdate, lastactivitydate,
@@ -160,16 +171,28 @@ object DatabaseFactory {
                 FROM posts
                 LEFT JOIN post_tags ON posts.id = post_tags.post_id
                 LEFT JOIN tags ON post_tags.tag_id = tags.id
-                WHERE LOWER(title) LIKE '%linux%' OR LOWER(body) LIKE '%linux%'
+                WHERE LOWER(title) LIKE '%$query%' OR LOWER(body) LIKE '%$query%'
                 GROUP BY posts.id, creationdate
                 ORDER BY creationdate DESC${limit?.let { "\nLIMIT $it" }.orEmpty()};
             """.trimIndent()
 
             exec(sqlQuery) { rs ->
-                //rs.asList { getDouble("ct") }
+                rs.asList {
+                    Post(
+                        getInt("id"),
+                        getTimestamp("creationdate"),
+                        getInt("viewcount"),
+                        getTimestamp("lasteditdate"),
+                        getTimestamp("lastactivitydate"),
+                        getString("title"),
+                        getString("body"),
+                        getInt("answercount"),
+                        getTimestamp("closeddate"),
+                        @Suppress("UNCHECKED_CAST")
+                        (getArray("tags").array as? Array<String>)?.asList() ?: emptyList()
+                    )
+                }
             }
-
-            TODO()
         }
     }
 

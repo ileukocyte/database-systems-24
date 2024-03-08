@@ -74,9 +74,25 @@ fun Application.configureRouting() {
         get("/v2/posts") {
             // #4
             // duration (minutes), limit
+            /*call.respondText {
+                buildJsonObject {
+                    val items = DatabaseFactory.getPostsByDuration(5, 2)
+                        ?.map { Json.encodeToJsonElement(it) }
+
+                    put("items", JsonArray(items ?: emptyList()))
+                }.toString()
+            }*/
 
             // #5
             // limit, query
+            /*call.respondText {
+                buildJsonObject {
+                    val items = DatabaseFactory.searchPosts("linux", 1)
+                        ?.map { Json.encodeToJsonElement(it) }
+
+                    put("items", JsonArray(items ?: emptyList()))
+                }.toString()
+            }*/
         }
     }
 }
