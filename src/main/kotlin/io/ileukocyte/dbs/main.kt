@@ -72,27 +72,37 @@ fun Application.configureRouting() {
         }
 
         get("/v2/posts") {
-            // #4
-            // duration (minutes), limit
-            /*call.respondText {
-                buildJsonObject {
-                    val items = DatabaseFactory.getPostsByDuration(5, 2)
-                        ?.map { Json.encodeToJsonElement(it) }
+            val queryParams = call.request.queryParameters
 
-                    put("items", JsonArray(items ?: emptyList()))
-                }.toString()
-            }*/
+            if (queryParams["duration"]?.toIntOrNull() != null) {
+                // #4
+                val duration = queryParams["duration"]?.toInt() ?: return@get
+                val limit = queryParams["limit"]?.toIntOrNull()
 
-            // #5
-            // limit, query
-            /*call.respondText {
-                buildJsonObject {
-                    val items = DatabaseFactory.searchPosts("linux", 1)
-                        ?.map { Json.encodeToJsonElement(it) }
+                call.respondText {
+                    buildJsonObject {
+                        val items = DatabaseFactory.getPostsByDuration(duration, limit)
+                            ?.map { Json.encodeToJsonElement(it) }
 
-                    put("items", JsonArray(items ?: emptyList()))
-                }.toString()
-            }*/
+                        put("items", JsonArray(items ?: emptyList()))
+                    }.toString()
+                }
+            } else if (!queryParams["query"].isNullOrEmpty()) {
+                // #5
+                val query = queryParams["query"] ?: return@get
+                val limit = queryParams["limit"]?.toIntOrNull()
+
+                call.respondText {
+                    buildJsonObject {
+                        val items = DatabaseFactory.searchPosts(query, limit)
+                            ?.map { Json.encodeToJsonElement(it) }
+
+                        put("items", JsonArray(items ?: emptyList()))
+                    }.toString()
+                }
+            } else {
+                call.respond(HttpStatusCode.BadRequest, "Invalid parameters")
+            }
         }
     }
 }
