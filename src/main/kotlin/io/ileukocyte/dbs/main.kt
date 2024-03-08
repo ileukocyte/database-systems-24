@@ -21,6 +21,7 @@ fun Application.module() {
 
 fun Application.configureRouting() {
     routing {
+        // #1
         get("/v2/posts/{post_id}/users") {
             call.parameters["post_id"]?.toIntOrNull()?.let { id ->
                 val json = buildJsonObject {
@@ -37,6 +38,7 @@ fun Application.configureRouting() {
             }
         }
 
+        // #2
         get("/v2/users/{user_id}/friends") {
             call.parameters["user_id"]?.toIntOrNull()?.let { id ->
                 val json = buildJsonObject {
@@ -53,13 +55,27 @@ fun Application.configureRouting() {
             }
         }
 
+        // #3
         get("/v2/tags/{tagname}/stats") {
+            call.parameters["tagname"]?.let { tag ->
+                val json = buildJsonObject {
+                    val items = JsonObject(DatabaseFactory
+                        .getTagStats(tag)
+                        ?.map { (k, v) -> k to JsonPrimitive(v) }
+                        ?.toMap() ?: emptyMap())
 
+                    put("result", items)
+                }
+
+                call.respondText(json.toString())
+            }
         }
 
         get("/v2/posts") {
+            // #4
             // duration (minutes), limit
 
+            // #5
             // limit, query
         }
     }

@@ -1,11 +1,10 @@
 package io.ileukocyte.dbs
 
 import io.ileukocyte.dbs.entities.User
-import kotlinx.coroutines.Dispatchers
 
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
+
 import java.sql.ResultSet
 
 object DatabaseFactory {
@@ -26,7 +25,7 @@ object DatabaseFactory {
 
     fun getPostUsers(id: Int): List<User>? {
         return transaction {
-            val query = """
+            val sqlQuery = """
                 SELECT users.id, reputation, users.creationdate,
                 displayname, lastaccessdate, websiteurl,
                 location, aboutme, users.views,
@@ -36,10 +35,10 @@ object DatabaseFactory {
                 LEFT JOIN comments ON postid = posts.id
                 JOIN users ON userid = users.id
                 WHERE posts.id = $id
-                ORDER BY comments.creationdate DESC
+                ORDER BY comments.creationdate DESC;
             """.trimIndent()
 
-            exec(query) { rs ->
+            exec(sqlQuery) { rs ->
                 rs.asList {
                     User(
                         getInt("id"),
@@ -54,7 +53,7 @@ object DatabaseFactory {
                         getInt("upvotes"),
                         getInt("downvotes"),
                         getString("profileimageurl")?.ifEmpty { null },
-                        getInt("age"),
+                        getObject("age") as? Int,
                         getInt("accountid")
                     )
                 }
@@ -64,7 +63,7 @@ object DatabaseFactory {
 
     fun getUserFriends(id: Int): List<User>? {
         return transaction {
-            val query = """
+            val sqlQuery = """
                 SELECT DISTINCT users.id, reputation, users.creationdate,
                 displayname, lastaccessdate, websiteurl,
                 location, aboutme, users.views,
@@ -77,7 +76,7 @@ object DatabaseFactory {
                 ORDER BY users.creationdate;
             """.trimIndent()
 
-            exec(query) { rs ->
+            exec(sqlQuery) { rs ->
                 rs.asList {
                     User(
                         getInt("id"),
@@ -92,11 +91,85 @@ object DatabaseFactory {
                         getInt("upvotes"),
                         getInt("downvotes"),
                         getString("profileimageurl")?.ifEmpty { null },
-                        getInt("age"),
+                        getObject("age") as? Int,
                         getInt("accountid")
                     )
                 }
             }
+        }
+    }
+
+    fun getTagStats(tag: String): Map<String, Double>? {
+        return transaction {
+            val sqlQuery = """
+                SELECT EXTRACT(ISODOW FROM posts.creationdate AT TIME ZONE 'UTC') AS dayofweek,
+                       ROUND(COUNT(*) FILTER (WHERE tagname = '$tag') * 100.0 / COUNT(DISTINCT posts.id), 2) AS ct
+                FROM tags
+                JOIN post_tags ON tags.id = post_tags.tag_id
+                JOIN posts ON post_tags.post_id = posts.id
+                GROUP BY dayofweek
+                ORDER BY dayofweek;
+            """.trimIndent()
+
+            exec(sqlQuery) { rs ->
+                rs.asList { getDouble("ct") }
+            }?.let { counts ->
+                val daysOfWeek = listOf(
+                    "monday",
+                    "tuesday",
+                    "wednesday",
+                    "thursday",
+                    "friday",
+                    "saturday",
+                    "sunday"
+                )
+
+                daysOfWeek.associateWith { counts[daysOfWeek.indexOf(it)] }
+            }
+        }
+    }
+
+    fun getPostsByDuration(minutes: Int, limit: Int?) {
+        return transaction {
+            val sqlQuery = """
+                SELECT *
+                FROM (
+                    SELECT id, creationdate, viewcount, lasteditdate, lastactivitydate, title, closeddate,
+                           ROUND(EXTRACT(EPOCH FROM (closeddate - creationdate)) / 60.0, 2) AS duration
+                    FROM posts
+                    WHERE closeddate IS NOT NULL
+                ) t
+                WHERE duration <= $minutes
+                ORDER BY creationdate DESC${limit?.let { "\nLIMIT $it" }.orEmpty()};
+            """.trimIndent()
+
+            exec(sqlQuery) { rs ->
+                //rs.asList { getDouble("ct") }
+            }
+
+            TODO()
+        }
+    }
+
+    fun searchPosts(query: String, limit: Int?) {
+        return transaction {
+            val sqlQuery = """
+                SELECT posts.id, creationdate, viewcount, lasteditdate, lastactivitydate,
+                       title, body, answercount, closeddate,
+                       COALESCE(ARRAY_AGG(tagname) FILTER (WHERE tagname IS NOT NULL), ARRAY[]::TEXT[]) AS tags
+                FROM posts
+                LEFT JOIN post_tags ON posts.id = post_tags.post_id
+                LEFT JOIN tags ON post_tags.tag_id = tags.id
+                WHERE LOWER(title) LIKE '%linux%' OR LOWER(body) LIKE '%linux%'
+                GROUP BY posts.id, creationdate
+                ORDER BY creationdate DESC${limit?.let { "\nLIMIT $it" }.orEmpty()};
+            """.trimIndent()
+
+            exec(sqlQuery) { rs ->
+                //rs.asList { getDouble("ct") }
+            }
+
+            TODO()
         }
     }
 
