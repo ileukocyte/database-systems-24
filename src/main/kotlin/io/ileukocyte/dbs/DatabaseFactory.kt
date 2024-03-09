@@ -106,9 +106,9 @@ object DatabaseFactory {
             val sqlQuery = """
                 SELECT EXTRACT(ISODOW FROM posts.creationdate AT TIME ZONE 'UTC') AS dayofweek,
                        ROUND(COUNT(*) FILTER (WHERE tagname = '$tag') * 100.0 / COUNT(DISTINCT posts.id), 2) AS ct
-                FROM tags
-                JOIN post_tags ON tags.id = post_tags.tag_id
-                JOIN posts ON post_tags.post_id = posts.id
+                FROM posts
+                LEFT JOIN post_tags ON posts.id = post_tags.post_id
+                LEFT JOIN tags ON post_tags.tag_id = tags.id
                 GROUP BY dayofweek
                 ORDER BY dayofweek;
             """.trimIndent()
@@ -171,7 +171,7 @@ object DatabaseFactory {
                 FROM posts
                 LEFT JOIN post_tags ON posts.id = post_tags.post_id
                 LEFT JOIN tags ON post_tags.tag_id = tags.id
-                WHERE LOWER(title) LIKE '%$query%' OR LOWER(body) LIKE '%$query%'
+                WHERE LOWER(UNACCENT(title)) LIKE '%$query%' OR LOWER(UNACCENT(body)) LIKE '%$query%'
                 GROUP BY posts.id, creationdate
                 ORDER BY creationdate DESC${limit?.let { "\nLIMIT $it" }.orEmpty()};
             """.trimIndent()
