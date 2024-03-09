@@ -25,7 +25,7 @@ object DatabaseFactory {
         )
     }
 
-    fun getPostUsers(id: Int): List<User>? {
+    fun getPostUsers(id: Int): List<User> {
         return transaction {
             val sqlQuery = """
                 SELECT users.id, reputation, users.creationdate,
@@ -60,10 +60,10 @@ object DatabaseFactory {
                     )
                 }
             }
-        }
+        } ?: emptyList()
     }
 
-    fun getUserFriends(id: Int): List<User>? {
+    fun getUserFriends(id: Int): List<User> {
         return transaction {
             val sqlQuery = """
                 SELECT DISTINCT users.id, reputation, users.creationdate,
@@ -98,10 +98,10 @@ object DatabaseFactory {
                     )
                 }
             }
-        }
+        } ?: emptyList()
     }
 
-    fun getTagStats(tag: String): Map<String, Double>? {
+    fun getTagStats(tag: String): Map<String, Double> {
         return transaction {
             val sqlQuery = """
                 SELECT EXTRACT(ISODOW FROM posts.creationdate AT TIME ZONE 'UTC') AS dayofweek,
@@ -128,10 +128,10 @@ object DatabaseFactory {
 
                 daysOfWeek.associateWith { counts[daysOfWeek.indexOf(it)] }
             }
-        }
+        } ?: emptyMap()
     }
 
-    fun getPostsByDuration(minutes: Int, limit: Int?): List<ClosedPost>? {
+    fun getPostsByDuration(minutes: Int, limit: Int? = null): List<ClosedPost> {
         return transaction {
             val sqlQuery = """
                 SELECT *
@@ -159,10 +159,10 @@ object DatabaseFactory {
                     )
                 }
             }
-        }
+        } ?: emptyList()
     }
 
-    fun searchPosts(query: String, limit: Int?): List<Post>? {
+    fun searchPosts(query: String, limit: Int? = null): List<Post> {
         return transaction {
             val sqlQuery = """
                 SELECT posts.id, creationdate, viewcount, lasteditdate, lastactivitydate,
@@ -193,7 +193,7 @@ object DatabaseFactory {
                     )
                 }
             }
-        }
+        } ?: emptyList()
     }
 
     private fun <T> ResultSet.asList(extract: ResultSet.() -> T) = buildList {
