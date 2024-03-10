@@ -33,10 +33,9 @@ object DatabaseFactory {
                        location, aboutme, users.views,
                        upvotes, downvotes, profileimageurl,
                        age, accountid
-                FROM posts
-                LEFT JOIN comments ON comments.postid = posts.id
-                JOIN users ON comments.userid = users.id
-                WHERE posts.id = $id
+                FROM users
+                JOIN comments ON comments.userid = users.id
+                WHERE comments.postid = $id
                 ORDER BY comments.creationdate DESC;
             """.trimIndent()
 
