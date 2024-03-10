@@ -42,7 +42,7 @@ fun Application.configureRouting() {
                     mapOf("items" to output)
                 )
 
-                call.respondText(json)
+                call.respondText(json, ContentType.Application.Json)
             } ?: run {
                 call.respond(HttpStatusCode.BadRequest, "Invalid post")
             }
@@ -57,7 +57,7 @@ fun Application.configureRouting() {
                     mapOf("items" to output)
                 )
 
-                call.respondText(json)
+                call.respondText(json, ContentType.Application.Json)
             } ?: run {
                 call.respond(HttpStatusCode.BadRequest, "Invalid user")
             }
@@ -72,7 +72,7 @@ fun Application.configureRouting() {
                     mapOf("result" to output)
                 )
 
-                call.respondText(json)
+                call.respondText(json, ContentType.Application.Json)
             }
         }
 
@@ -90,7 +90,7 @@ fun Application.configureRouting() {
                     mapOf("items" to output)
                 )
 
-                call.respondText(json)
+                call.respondText(json, ContentType.Application.Json)
             } else if (!queryParams["query"].isNullOrEmpty()) {
                 // #5
                 val query = queryParams["query"] ?: return@get
@@ -102,7 +102,7 @@ fun Application.configureRouting() {
                     mapOf("items" to output)
                 )
 
-                call.respondText(json)
+                call.respondText(json, ContentType.Application.Json)
             } else {
                 call.respond(HttpStatusCode.BadRequest, "Invalid parameters")
             }

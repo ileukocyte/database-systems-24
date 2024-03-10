@@ -29,13 +29,13 @@ object DatabaseFactory {
         return transaction {
             val sqlQuery = """
                 SELECT users.id, reputation, users.creationdate,
-                displayname, lastaccessdate, websiteurl,
-                location, aboutme, users.views,
-                upvotes, downvotes, profileimageurl,
-                age, accountid
+                       displayname, lastaccessdate, websiteurl,
+                       location, aboutme, users.views,
+                       upvotes, downvotes, profileimageurl,
+                       age, accountid
                 FROM posts
-                LEFT JOIN comments ON postid = posts.id
-                JOIN users ON userid = users.id
+                LEFT JOIN comments ON comments.postid = posts.id
+                JOIN users ON comments.userid = users.id
                 WHERE posts.id = $id
                 ORDER BY comments.creationdate DESC;
             """.trimIndent()
@@ -67,14 +67,21 @@ object DatabaseFactory {
         return transaction {
             val sqlQuery = """
                 SELECT DISTINCT users.id, reputation, users.creationdate,
-                displayname, lastaccessdate, websiteurl,
-                location, aboutme, users.views,
-                upvotes, downvotes, profileimageurl,
-                age, accountid
-                FROM posts
-                LEFT JOIN comments ON postid = posts.id
-                JOIN users ON userid = users.id
-                WHERE posts.owneruserid = $id
+                                displayname, lastaccessdate, websiteurl,
+                                location, aboutme, users.views,
+                                upvotes, downvotes, profileimageurl,
+                                age, accountid
+                FROM users
+                JOIN comments ON comments.userid = users.id
+                JOIN (
+                    SELECT posts.id
+                    FROM posts
+                    WHERE posts.owneruserid = $id
+                    UNION
+                    SELECT postid AS id
+                    FROM comments
+                    WHERE comments.userid = $id
+                ) p ON comments.postid = p.id
                 ORDER BY users.creationdate;
             """.trimIndent()
 
@@ -134,14 +141,10 @@ object DatabaseFactory {
     fun getPostsByDuration(minutes: Int, limit: Int? = null): List<ClosedPost> {
         return transaction {
             val sqlQuery = """
-                SELECT *
-                FROM (
-                    SELECT id, creationdate, viewcount, lasteditdate, lastactivitydate, title, closeddate,
-                           ROUND(EXTRACT(EPOCH FROM (closeddate - creationdate)) / 60.0, 2) AS duration
-                    FROM posts
-                    WHERE closeddate IS NOT NULL
-                ) t
-                WHERE duration <= $minutes
+                SELECT id, creationdate, viewcount, lasteditdate, lastactivitydate, title, closeddate,
+                       ROUND(EXTRACT(EPOCH FROM (closeddate - creationdate)) / 60.0, 2) AS duration
+                FROM posts
+                WHERE closeddate IS NOT NULL AND ROUND(EXTRACT(EPOCH FROM (closeddate - creationdate)) / 60.0, 2) <= $minutes
                 ORDER BY creationdate DESC${limit?.let { "\nLIMIT $it" }.orEmpty()};
             """.trimIndent()
 
@@ -171,7 +174,8 @@ object DatabaseFactory {
                 FROM posts
                 LEFT JOIN post_tags ON posts.id = post_tags.post_id
                 LEFT JOIN tags ON post_tags.tag_id = tags.id
-                WHERE LOWER(UNACCENT(title)) LIKE '%$query%' OR LOWER(UNACCENT(body)) LIKE '%$query%'
+                WHERE UNACCENT(title) ILIKE UNACCENT('%$query%')
+                      OR UNACCENT(body) ILIKE UNACCENT('%$query%')
                 GROUP BY posts.id, creationdate
                 ORDER BY creationdate DESC${limit?.let { "\nLIMIT $it" }.orEmpty()};
             """.trimIndent()
