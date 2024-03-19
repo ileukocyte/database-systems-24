@@ -66,19 +66,41 @@ object DatabaseFactory {
     ): List<TaggedPostComment> {
         return transaction {
             val sqlQuery = """
-                --
+                SELECT comments.id, users.displayname, p.body, comments.text, comments.score,
+                       ARRAY_POSITION(comment_ids, comments.id) AS position
+                FROM comments
+                JOIN users ON users.id = comments.userid
+                JOIN (
+                    SELECT posts.id AS post_id, posts.body,
+                           ARRAY_AGG(comments.id ORDER BY comments.creationdate) AS comment_ids
+                    FROM posts
+                    JOIN post_tags ON post_tags.post_id = posts.id
+                    JOIN tags ON post_tags.tag_id = tags.id
+                    JOIN comments ON posts.id = comments.postid
+                    WHERE tags.tagname = ?
+                    GROUP BY posts.id, posts.body, posts.creationdate
+                    HAVING COUNT(*) >= ?
+                    ORDER BY posts.creationdate${limit?.let { "\nLIMIT ?" }.orEmpty()}
+                ) p ON p.comment_ids[?] = comments.id;
             """.trimIndent()
             val params = listOfNotNull(
                 TextColumnType() to tag,
                 UIntegerColumnType() to position,
-                limit?.let { UIntegerColumnType() to it }
+                limit?.let { UIntegerColumnType() to it },
+                UIntegerColumnType() to position
             )
 
             exec(sqlQuery, params) { rs ->
                 rs.asList {
-
+                    TaggedPostComment(
+                        rs.getInt("id"),
+                        rs.getString("displayname"),
+                        rs.getString("body"),
+                        rs.getString("text"),
+                        rs.getInt("score"),
+                        rs.getInt("position").toUInt()
+                    )
                 }
-                emptyList() // TODO
             }
         } ?: emptyList()
     }
