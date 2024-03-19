@@ -1,8 +1,7 @@
 package io.ileukocyte.dbs
 
-import io.ileukocyte.dbs.entities.v2.ClosedPost
-import io.ileukocyte.dbs.entities.v2.Post
-import io.ileukocyte.dbs.entities.v2.User
+import io.ileukocyte.dbs.entities.v2.*
+import io.ileukocyte.dbs.entities.v3.*
 
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -38,12 +37,12 @@ fun Application.configureRouting() {
         get("/v3/users/{user_id}/badge_history") {
             call.parameters["user_id"]?.toIntOrNull()?.let { id ->
                 val output = DatabaseFactory.getBadgeHistory(id)
-                /*val json = prettyJson.encodeToString(
-                    MapSerializer(String.serializer(), ListSerializer(User.serializer())),
+                val json = prettyJson.encodeToString(
+                    MapSerializer(String.serializer(), ListSerializer(Achievement.serializer())),
                     mapOf("items" to output)
                 )
 
-                call.respondText(json, ContentType.Application.Json)*/
+                call.respondText(json, ContentType.Application.Json)
             } ?: run {
                 call.respond(HttpStatusCode.BadRequest, "Invalid user")
             }
@@ -55,12 +54,12 @@ fun Application.configureRouting() {
             call.parameters["tag"]?.let { tag ->
                 call.request.queryParameters["count"]?.toUIntOrNull()?.let { count ->
                     val output = DatabaseFactory.getPostsByComments(tag, count)
-                    /*val json = prettyJson.encodeToString(
-                        MapSerializer(String.serializer(), MapSerializer(String.serializer(), Double.serializer())),
+                    val json = prettyJson.encodeToString(
+                        MapSerializer(String.serializer(), ListSerializer(CommentedPost.serializer())),
                         mapOf("result" to output)
                     )
 
-                    call.respondText(json, ContentType.Application.Json)*/
+                    call.respondText(json, ContentType.Application.Json)
                 } ?: run {
                     call.respond(HttpStatusCode.BadRequest, "Invalid count")
                 }
@@ -74,12 +73,12 @@ fun Application.configureRouting() {
                 call.parameters["position"]?.toUIntOrNull()?.let { position ->
                     val limit = call.request.queryParameters["limit"]?.toUIntOrNull()
                     val output = DatabaseFactory.getTaggedPostComments(tag, position, limit)
-                    /*val json = prettyJson.encodeToString(
-                        MapSerializer(String.serializer(), MapSerializer(String.serializer(), Double.serializer())),
+                    val json = prettyJson.encodeToString(
+                        MapSerializer(String.serializer(), ListSerializer(TaggedPostComment.serializer())),
                         mapOf("result" to output)
                     )
 
-                    call.respondText(json, ContentType.Application.Json)*/
+                    call.respondText(json, ContentType.Application.Json)
                 } ?: run {
                     call.respond(HttpStatusCode.BadRequest, "Invalid position")
                 }
@@ -92,12 +91,12 @@ fun Application.configureRouting() {
             call.parameters["post_id"]?.toIntOrNull()?.let { id ->
                 val limit = call.request.queryParameters["limit"]?.toUIntOrNull()
                 val output = DatabaseFactory.getPostThread(id, limit)
-                /*val json = prettyJson.encodeToString(
-                    MapSerializer(String.serializer(), MapSerializer(String.serializer(), Double.serializer())),
+                val json = prettyJson.encodeToString(
+                    MapSerializer(String.serializer(), ListSerializer(ThreadPost.serializer())),
                     mapOf("result" to output)
                 )
 
-                call.respondText(json, ContentType.Application.Json)*/
+                call.respondText(json, ContentType.Application.Json)
             } ?: run {
                 call.respond(HttpStatusCode.BadRequest, "Invalid post")
             }

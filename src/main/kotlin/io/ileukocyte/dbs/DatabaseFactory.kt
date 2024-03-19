@@ -1,8 +1,7 @@
 package io.ileukocyte.dbs
 
-import io.ileukocyte.dbs.entities.v2.ClosedPost
-import io.ileukocyte.dbs.entities.v2.Post
-import io.ileukocyte.dbs.entities.v2.User
+import io.ileukocyte.dbs.entities.v2.*
+import io.ileukocyte.dbs.entities.v3.*
 
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.IntegerColumnType
@@ -28,7 +27,7 @@ object DatabaseFactory {
 
     //// Assignment #3
     // #1
-    fun getBadgeHistory(userId: Int): List<Any> {
+    fun getBadgeHistory(userId: Int): List<Achievement> {
         return transaction {
             val sqlQuery = """
                 --
@@ -38,12 +37,13 @@ object DatabaseFactory {
                 rs.asList {
 
                 }
+                emptyList() // TODO
             }
         } ?: emptyList()
     }
 
     // #2
-    fun getPostsByComments(tag: String, count: UInt): List<Any> {
+    fun getPostsByComments(tag: String, count: UInt): List<CommentedPost> {
         return transaction {
             val sqlQuery = """
                 --
@@ -53,12 +53,17 @@ object DatabaseFactory {
                 rs.asList {
 
                 }
+                emptyList() // TODO
             }
         } ?: emptyList()
     }
 
     // #3
-    fun getTaggedPostComments(tag: String, position: UInt, limit: UInt? = null): List<Any> {
+    fun getTaggedPostComments(
+        tag: String,
+        position: UInt,
+        limit: UInt? = null
+    ): List<TaggedPostComment> {
         return transaction {
             val sqlQuery = """
                 --
@@ -73,12 +78,13 @@ object DatabaseFactory {
                 rs.asList {
 
                 }
+                emptyList() // TODO
             }
         } ?: emptyList()
     }
 
     // #4
-    fun getPostThread(postId: Int, limit: UInt? = null): List<Any> {
+    fun getPostThread(postId: Int, limit: UInt? = null): List<ThreadPost> {
         return transaction {
             val sqlQuery = """
                 --
@@ -92,6 +98,7 @@ object DatabaseFactory {
                 rs.asList {
 
                 }
+                emptyList() // TODO
             }
         } ?: emptyList()
     }
