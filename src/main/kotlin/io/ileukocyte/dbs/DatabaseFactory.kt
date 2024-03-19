@@ -9,6 +9,10 @@ import org.jetbrains.exposed.sql.TextColumnType
 import org.jetbrains.exposed.sql.UIntegerColumnType
 import org.jetbrains.exposed.sql.transactions.transaction
 
+import java.time.Duration
+
+import kotlin.math.floor
+
 object DatabaseFactory {
     fun init() {
         val dbName = System.getenv("DATABASE_NAME")
@@ -46,14 +50,53 @@ object DatabaseFactory {
     fun getPostsByComments(tag: String, count: UInt): List<CommentedPost> {
         return transaction {
             val sqlQuery = """
-                --
+                SELECT *, ROUND(SUM(diff) OVER (PARTITION BY post_id ORDER BY created_at ROWS UNBOUNDED PRECEDING)
+                              / ROW_NUMBER() OVER (PARTITION BY post_id), 6) AS avg
+                FROM (
+                    SELECT p.post_id, p.title, users.displayname, comments.text,
+                           comments.creationdate AS created_at, p.post_created_at,
+                           ROUND(EXTRACT(EPOCH FROM (comments.creationdate -
+                                               LAG(comments.creationdate, 1, p.post_created_at) OVER (PARTITION BY p.post_id ORDER BY comments.creationdate))
+                           ), 6) AS diff
+                    FROM comments
+                    JOIN users ON users.id = comments.userid
+                    JOIN (
+                        SELECT posts.id AS post_id, posts.title AS title, posts.creationdate AS post_created_at
+                        FROM posts
+                        JOIN post_tags ON post_tags.post_id = posts.id
+                        JOIN tags ON post_tags.tag_id = tags.id
+                        JOIN comments ON posts.id = comments.postid
+                        WHERE tags.tagname = ?
+                        GROUP BY posts.id, posts.title, posts.creationdate
+                        HAVING COUNT(comments.id) > ?
+                    ) p ON p.post_id = comments.postid
+                ) p
+                ORDER BY post_created_at, created_at;
             """.trimIndent()
 
             exec(sqlQuery, listOf(TextColumnType() to tag, UIntegerColumnType() to count)) { rs ->
-                rs.asList {
+                fun parseIntervalEpoch(seconds: Double): String {
+                    val duration = Duration.ofSeconds(floor(seconds).toLong())
 
+                    return duration.toDaysPart()
+                        .takeIf { it > 0 }
+                        ?.let { "$it day${if (it > 1) "s" else ""} " }.orEmpty() +
+                            "%02d:%02d:%02d".format(duration.toHoursPart(), duration.toMinutesPart(), duration.toSecondsPart()) +
+                            "$seconds".let { it.substring(it.indexOf('.')) }
                 }
-                emptyList() // TODO
+
+                rs.asList {
+                    CommentedPost(
+                        rs.getInt("post_id"),
+                        rs.getString("title"),
+                        rs.getString("displayname"),
+                        rs.getString("text"),
+                        rs.getTimestamp("post_created_at"),
+                        rs.getTimestamp("created_at"),
+                        parseIntervalEpoch(rs.getDouble("diff")),
+                        parseIntervalEpoch(rs.getDouble("avg"))
+                    )
+                }
             }
         } ?: emptyList()
     }
