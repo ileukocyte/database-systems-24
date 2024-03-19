@@ -1,4 +1,6 @@
-package io.ileukocyte.dbs.entities
+package io.ileukocyte.dbs.entities.v2
+
+import io.ileukocyte.dbs.entities.TimestampSerializer
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

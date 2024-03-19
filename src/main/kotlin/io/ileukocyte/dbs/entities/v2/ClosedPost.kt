@@ -1,4 +1,6 @@
-package io.ileukocyte.dbs.entities
+package io.ileukocyte.dbs.entities.v2
+
+import io.ileukocyte.dbs.entities.TimestampSerializer
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -6,7 +8,7 @@ import kotlinx.serialization.Serializable
 import java.sql.Timestamp
 
 @Serializable
-data class Post(
+data class ClosedPost(
     val id: Int,
     @[SerialName("creationdate") Serializable(with = TimestampSerializer::class)]
     val creationDate: Timestamp,
@@ -17,10 +19,7 @@ data class Post(
     @[SerialName("lastactivitydate") Serializable(with = TimestampSerializer::class)]
     val lastActivityDate: Timestamp?,
     val title: String?,
-    val body: String,
-    @SerialName("answercount")
-    val answerCount: Int,
     @[SerialName("closeddate") Serializable(with = TimestampSerializer::class)]
-    val closedDate: Timestamp?,
-    val tags: List<String>
+    val closedDate: Timestamp,
+    val duration: Double
 )

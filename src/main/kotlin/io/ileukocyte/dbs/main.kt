@@ -1,8 +1,8 @@
 package io.ileukocyte.dbs
 
-import io.ileukocyte.dbs.entities.ClosedPost
-import io.ileukocyte.dbs.entities.Post
-import io.ileukocyte.dbs.entities.User
+import io.ileukocyte.dbs.entities.v2.ClosedPost
+import io.ileukocyte.dbs.entities.v2.Post
+import io.ileukocyte.dbs.entities.v2.User
 
 import io.ktor.http.*
 import io.ktor.server.application.*
