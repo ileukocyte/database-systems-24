@@ -101,10 +101,10 @@ fun Application.configureRouting() {
         get("/v2/posts") {
             val queryParams = call.request.queryParameters
 
-            if (queryParams["duration"]?.toIntOrNull() != null) {
+            if (queryParams["duration"]?.toUIntOrNull() != null) {
                 // #4
-                val duration = queryParams["duration"]?.toInt() ?: return@get
-                val limit = queryParams["limit"]?.toIntOrNull()
+                val duration = queryParams["duration"]?.toUInt() ?: return@get
+                val limit = queryParams["limit"]?.toUIntOrNull()
 
                 val output = DatabaseFactory.getPostsByDuration(duration, limit)
                 val json = prettyJson.encodeToString(
@@ -116,7 +116,7 @@ fun Application.configureRouting() {
             } else if (!queryParams["query"].isNullOrEmpty()) {
                 // #5
                 val query = queryParams["query"] ?: return@get
-                val limit = queryParams["limit"]?.toIntOrNull()
+                val limit = queryParams["limit"]?.toUIntOrNull()
 
                 val output = DatabaseFactory.searchPosts(query, limit)
                 val json = prettyJson.encodeToString(

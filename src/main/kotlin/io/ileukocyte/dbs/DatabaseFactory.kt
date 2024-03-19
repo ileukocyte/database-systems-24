@@ -5,9 +5,10 @@ import io.ileukocyte.dbs.entities.Post
 import io.ileukocyte.dbs.entities.User
 
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.IntegerColumnType
+import org.jetbrains.exposed.sql.TextColumnType
+import org.jetbrains.exposed.sql.UIntegerColumnType
 import org.jetbrains.exposed.sql.transactions.transaction
-
-import java.sql.ResultSet
 
 object DatabaseFactory {
     fun init() {
@@ -33,7 +34,61 @@ object DatabaseFactory {
                 --
             """.trimIndent()
 
-            exec(sqlQuery) { rs ->
+            exec(sqlQuery, listOf(IntegerColumnType() to userId)) { rs ->
+                rs.asList {
+
+                }
+            }
+        } ?: emptyList()
+    }
+
+    // #2
+    fun getPostsByComments(tag: String, count: UInt): List<Any> {
+        return transaction {
+            val sqlQuery = """
+                --
+            """.trimIndent()
+
+            exec(sqlQuery, listOf(TextColumnType() to tag, UIntegerColumnType() to count)) { rs ->
+                rs.asList {
+
+                }
+            }
+        } ?: emptyList()
+    }
+
+    // #3
+    fun getTaggedPostComments(tag: String, position: UInt, limit: UInt? = null): List<Any> {
+        return transaction {
+            val sqlQuery = """
+                --
+            """.trimIndent()
+            val params = listOfNotNull(
+                TextColumnType() to tag,
+                UIntegerColumnType() to position,
+                limit?.let { UIntegerColumnType() to it }
+            )
+
+            exec(sqlQuery, params) { rs ->
+                rs.asList {
+
+                }
+            }
+        } ?: emptyList()
+    }
+
+    // #4
+    fun getPostThread(postId: Int, limit: UInt? = null): List<Any> {
+        return transaction {
+            val sqlQuery = """
+                --
+            """.trimIndent()
+            val params = listOfNotNull(
+                IntegerColumnType() to postId,
+                limit?.let { UIntegerColumnType() to it }
+            )
+
+            exec(sqlQuery, params) { rs ->
                 rs.asList {
 
                 }
@@ -53,11 +108,11 @@ object DatabaseFactory {
                        age, accountid
                 FROM users
                 JOIN comments ON comments.userid = users.id
-                WHERE comments.postid = $id
+                WHERE comments.postid = ?
                 ORDER BY comments.creationdate DESC;
             """.trimIndent()
 
-            exec(sqlQuery) { rs ->
+            exec(sqlQuery, listOf(IntegerColumnType() to id)) { rs ->
                 rs.asList {
                     User(
                         getInt("id"),
@@ -94,16 +149,16 @@ object DatabaseFactory {
                 JOIN (
                     SELECT posts.id
                     FROM posts
-                    WHERE posts.owneruserid = $id
+                    WHERE posts.owneruserid = ?
                     UNION
                     SELECT postid AS id
                     FROM comments
-                    WHERE comments.userid = $id
+                    WHERE comments.userid = ?
                 ) p ON comments.postid = p.id
                 ORDER BY users.creationdate;
             """.trimIndent()
 
-            exec(sqlQuery) { rs ->
+            exec(sqlQuery, listOf(IntegerColumnType() to id, IntegerColumnType() to id)) { rs ->
                 rs.asList {
                     User(
                         getInt("id"),
@@ -131,7 +186,7 @@ object DatabaseFactory {
         return transaction {
             val sqlQuery = """
                 SELECT EXTRACT(ISODOW FROM posts.creationdate AT TIME ZONE 'UTC') AS dayofweek,
-                       ROUND(COUNT(*) FILTER (WHERE tagname = '$tag') * 100.0 / COUNT(DISTINCT posts.id), 2) AS ct
+                       ROUND(COUNT(*) FILTER (WHERE tagname = ?) * 100.0 / COUNT(DISTINCT posts.id), 2) AS ct
                 FROM posts
                 LEFT JOIN post_tags ON posts.id = post_tags.post_id
                 LEFT JOIN tags ON post_tags.tag_id = tags.id
@@ -139,7 +194,7 @@ object DatabaseFactory {
                 ORDER BY dayofweek;
             """.trimIndent()
 
-            exec(sqlQuery) { rs ->
+            exec(sqlQuery, listOf(TextColumnType() to tag)) { rs ->
                 rs.asList { getDouble("ct") }
             }?.let { counts ->
                 val daysOfWeek = listOf(
@@ -158,17 +213,21 @@ object DatabaseFactory {
     }
 
     // #4
-    fun getPostsByDuration(minutes: Int, limit: Int? = null): List<ClosedPost> {
+    fun getPostsByDuration(minutes: UInt, limit: UInt? = null): List<ClosedPost> {
         return transaction {
             val sqlQuery = """
                 SELECT id, creationdate, viewcount, lasteditdate, lastactivitydate, title, closeddate,
                        ROUND(EXTRACT(EPOCH FROM (closeddate - creationdate)) / 60.0, 2) AS duration
                 FROM posts
-                WHERE closeddate IS NOT NULL AND ROUND(EXTRACT(EPOCH FROM (closeddate - creationdate)) / 60.0, 2) <= $minutes
-                ORDER BY creationdate DESC${limit?.let { "\nLIMIT $it" }.orEmpty()};
+                WHERE closeddate IS NOT NULL AND ROUND(EXTRACT(EPOCH FROM (closeddate - creationdate)) / 60.0, 2) <= ?
+                ORDER BY creationdate DESC${limit?.let { "\nLIMIT ?" }.orEmpty()};
             """.trimIndent()
+            val params = listOfNotNull(
+                UIntegerColumnType() to minutes,
+                limit?.let { UIntegerColumnType() to it }
+            )
 
-            exec(sqlQuery) { rs ->
+            exec(sqlQuery, params) { rs ->
                 rs.asList {
                     ClosedPost(
                         getInt("id"),
@@ -186,7 +245,7 @@ object DatabaseFactory {
     }
 
     // #5
-    fun searchPosts(query: String, limit: Int? = null): List<Post> {
+    fun searchPosts(query: String, limit: UInt? = null): List<Post> {
         return transaction {
             val sqlQuery = """
                 SELECT posts.id, creationdate, viewcount, lasteditdate, lastactivitydate,
@@ -195,13 +254,18 @@ object DatabaseFactory {
                 FROM posts
                 LEFT JOIN post_tags ON posts.id = post_tags.post_id
                 LEFT JOIN tags ON post_tags.tag_id = tags.id
-                WHERE UNACCENT(title) ILIKE UNACCENT('%$query%')
-                      OR UNACCENT(body) ILIKE UNACCENT('%$query%')
+                WHERE UNACCENT(title) ILIKE UNACCENT(?)
+                    OR UNACCENT(body) ILIKE UNACCENT(?)
                 GROUP BY posts.id, creationdate
-                ORDER BY creationdate DESC${limit?.let { "\nLIMIT $it" }.orEmpty()};
+                ORDER BY creationdate DESC${limit?.let { "\nLIMIT ?" }.orEmpty()};
             """.trimIndent()
+            val params = listOfNotNull(
+                TextColumnType() to "%$query%",
+                TextColumnType() to "%$query%",
+                limit?.let { UIntegerColumnType() to it }
+            )
 
-            exec(sqlQuery) { rs ->
+            exec(sqlQuery, params) { rs ->
                 rs.asList {
                     Post(
                         getInt("id"),
