@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "io.ileukocyte"
-version = "2.0.2"
+version = "3.0.0"
 
 repositories {
     mavenCentral()
@@ -20,7 +20,7 @@ dependencies {
     implementation(ktor("server-netty-jvm"))
     implementation(kotlinx("serialization-json", "1.6.3"))
 
-    implementation("org.postgresql:postgresql:42.7.2")
+    implementation("org.postgresql:postgresql:42.7.3")
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")

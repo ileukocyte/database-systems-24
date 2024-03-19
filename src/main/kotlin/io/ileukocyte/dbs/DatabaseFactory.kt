@@ -25,6 +25,24 @@ object DatabaseFactory {
         )
     }
 
+    //// Assignment #3
+    // #1
+    fun getBadgeHistory(userId: Int): List<Any> {
+        return transaction {
+            val sqlQuery = """
+                --
+            """.trimIndent()
+
+            exec(sqlQuery) { rs ->
+                rs.asList {
+
+                }
+            }
+        } ?: emptyList()
+    }
+
+    //// Assignment #2
+    // #1
     fun getPostUsers(id: Int): List<User> {
         return transaction {
             val sqlQuery = """
@@ -62,6 +80,7 @@ object DatabaseFactory {
         } ?: emptyList()
     }
 
+    // #2
     fun getUserFriends(id: Int): List<User> {
         return transaction {
             val sqlQuery = """
@@ -107,6 +126,7 @@ object DatabaseFactory {
         } ?: emptyList()
     }
 
+    // #3
     fun getTagStats(tag: String): Map<String, Double> {
         return transaction {
             val sqlQuery = """
@@ -137,6 +157,7 @@ object DatabaseFactory {
         } ?: emptyMap()
     }
 
+    // #4
     fun getPostsByDuration(minutes: Int, limit: Int? = null): List<ClosedPost> {
         return transaction {
             val sqlQuery = """
@@ -164,6 +185,7 @@ object DatabaseFactory {
         } ?: emptyList()
     }
 
+    // #5
     fun searchPosts(query: String, limit: Int? = null): List<Post> {
         return transaction {
             val sqlQuery = """
@@ -197,11 +219,5 @@ object DatabaseFactory {
                 }
             }
         } ?: emptyList()
-    }
-
-    private fun <T> ResultSet.asList(extract: ResultSet.() -> T) = buildList {
-        while (next()) {
-            add(this@asList.extract())
-        }
     }
 }

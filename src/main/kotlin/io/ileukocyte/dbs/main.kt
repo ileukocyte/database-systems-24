@@ -33,6 +33,28 @@ fun Application.configureRouting() {
     }
 
     routing {
+        //// Assignment #3
+        // #1 120
+        get("/v3/users/{user_id}/badge_history") {
+
+        }
+
+        // #2 networking, 40
+        get("/v3/tags/{tag}/comments") {
+            // ?count=
+        }
+
+        // #3 linux, 2, 1
+        get("/v3/tags/{tag}/comments/{position}") {
+            // ?limit=
+        }
+
+        // #4 2154, 2
+        get("/v3/posts/{post_id}") {
+            // ?limit=
+        }
+
+        //// Assignment #2
         // #1
         get("/v2/posts/{post_id}/users") {
             call.parameters["post_id"]?.toIntOrNull()?.let { id ->
@@ -64,8 +86,8 @@ fun Application.configureRouting() {
         }
 
         // #3
-        get("/v2/tags/{tagname}/stats") {
-            call.parameters["tagname"]?.let { tag ->
+        get("/v2/tags/{tag}/stats") {
+            call.parameters["tag"]?.let { tag ->
                 val output = DatabaseFactory.getTagStats(tag)
                 val json = prettyJson.encodeToString(
                     MapSerializer(String.serializer(), MapSerializer(String.serializer(), Double.serializer())),
