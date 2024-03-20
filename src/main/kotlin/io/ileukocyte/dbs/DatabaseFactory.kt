@@ -174,18 +174,26 @@ object DatabaseFactory {
     fun getPostThread(postId: Int, limit: UInt? = null): List<ThreadPost> {
         return transaction {
             val sqlQuery = """
-                --
+                SELECT displayname, body, posts.creationdate AS created_at
+                FROM posts
+                JOIN users ON posts.owneruserid = users.id
+                WHERE posts.id = ? OR posts.parentid = ?
+                ORDER BY created_at${limit?.let { "\nLIMIT ?" }.orEmpty()};
             """.trimIndent()
             val params = listOfNotNull(
+                IntegerColumnType() to postId,
                 IntegerColumnType() to postId,
                 limit?.let { UIntegerColumnType() to it }
             )
 
             exec(sqlQuery, params) { rs ->
                 rs.asList {
-
+                    ThreadPost(
+                        rs.getString("displayname"),
+                        rs.getString("body"),
+                        rs.getTimestamp("created_at")
+                    )
                 }
-                emptyList() // TODO
             }
         } ?: emptyList()
     }

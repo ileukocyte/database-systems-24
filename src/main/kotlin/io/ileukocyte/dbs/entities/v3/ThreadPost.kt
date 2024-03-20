@@ -11,7 +11,7 @@ import java.sql.Timestamp
 data class ThreadPost(
     @SerialName("displayname")
     val displayName: String,
-    val body: String,
+    val body: String?,
     @[SerialName("created_at") Serializable(with = TimestampSerializer::class)]
     val createdAt: Timestamp
 )
