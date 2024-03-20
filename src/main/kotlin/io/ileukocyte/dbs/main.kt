@@ -33,7 +33,8 @@ fun Application.configureRouting() {
 
     routing {
         //// Assignment #3
-        // #1 120
+        // #1
+        // Example: user_id = 120
         get("/v3/users/{user_id}/badge_history") {
             call.parameters["user_id"]?.toIntOrNull()?.let { id ->
                 val output = DatabaseFactory.getBadgeHistory(id)
@@ -48,9 +49,9 @@ fun Application.configureRouting() {
             }
         }
 
-        // #2 networking, 40
-        get("/v3/tags/{tag}/comments") {
-            // ?count=
+        // #2
+        // Example: tag = networking, count = 40
+        get("/v3/tags/{tag}/comments") { // ?count=
             call.parameters["tag"]?.let { tag ->
                 call.request.queryParameters["count"]?.toUIntOrNull()?.let { count ->
                     val output = DatabaseFactory.getPostsByComments(tag, count)
@@ -66,9 +67,9 @@ fun Application.configureRouting() {
             }
         }
 
-        // #3 linux, 2, 1
-        get("/v3/tags/{tag}/comments/{position}") {
-            // ?limit=
+        // #3
+        // Example: tag = linux, position = 2, limit = 1
+        get("/v3/tags/{tag}/comments/{position}") { // ?limit=
             call.parameters["tag"]?.let { tag ->
                 call.parameters["position"]?.toUIntOrNull()?.let { position ->
                     val limit = call.request.queryParameters["limit"]?.toUIntOrNull()
@@ -85,9 +86,9 @@ fun Application.configureRouting() {
             }
         }
 
-        // #4 2154, 2
-        get("/v3/posts/{post_id}") {
-            // ?limit=
+        // #4
+        // Example: post_id = 2154, limit = 2
+        get("/v3/posts/{post_id}") { // ?limit=
             call.parameters["post_id"]?.toIntOrNull()?.let { id ->
                 val limit = call.request.queryParameters["limit"]?.toUIntOrNull()
                 val output = DatabaseFactory.getPostThread(id, limit)

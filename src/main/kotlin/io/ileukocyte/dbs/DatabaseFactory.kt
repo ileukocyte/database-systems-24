@@ -34,14 +34,36 @@ object DatabaseFactory {
     fun getBadgeHistory(userId: Int): List<Achievement> {
         return transaction {
             val sqlQuery = """
-                --
+                SELECT id, title, type, created_at,
+                       ROW_NUMBER() OVER (PARTITION BY type ORDER BY created_at) AS position
+                FROM (
+                    SELECT *, LEAD(type) OVER () AS ld, LAG(type) OVER () AS lg
+                    FROM (
+                        SELECT id, name AS title, 'badge' AS type, date AS created_at
+                        FROM badges
+                        WHERE userid = ?
+                        UNION
+                        SELECT id, title, 'post' AS type, creationdate AS created_at
+                        FROM posts
+                        WHERE owneruserid = ?
+                        ORDER BY created_at
+                    ) achievements
+                ) achievements
+                WHERE (type = 'post' AND ld = 'badge') OR (type = 'badge' AND lg = 'post')
+                ORDER BY created_at;
             """.trimIndent()
+            val params = listOf(IntegerColumnType() to userId, IntegerColumnType() to userId)
 
-            exec(sqlQuery, listOf(IntegerColumnType() to userId)) { rs ->
+            exec(sqlQuery, params) { rs ->
                 rs.asList {
-
+                    Achievement(
+                        rs.getInt("id"),
+                        rs.getString("title"),
+                        Achievement.Type.valueOf(rs.getString("type").uppercase()),
+                        rs.getTimestamp("created_at"),
+                        rs.getInt("position").toUInt()
+                    )
                 }
-                emptyList() // TODO
             }
         } ?: emptyList()
     }
