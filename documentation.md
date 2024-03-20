@@ -1,87 +1,96 @@
-# Dokumentácia k zadaniu č. 2
+# Dokumentácia k zadaniu č. 3
+Oleksandr Oksanich, AIS ID: 122480
+
+Cvičenie: Dubec-Bencel, utorok 11:00
 ## Endpointy
 ### 1. endpoint
-Dopyt pre 1. endpoint jednoducho urobí INNER JOIN pre tabuľky používateľov a komentárov, zoradí používateľov podľa dátumu vytvorenia ich komentárov zostupne a vyberie potrebné údaje používateľov na základe ID príspevku z tabuľky komentárov.
+...
 ```postgresql
-SELECT users.id, reputation, users.creationdate,
-       displayname, lastaccessdate, websiteurl,
-       location, aboutme, users.views,
-       upvotes, downvotes, profileimageurl,
-       age, accountid
-FROM users
-JOIN comments ON comments.userid = users.id
-WHERE comments.postid = $id
-ORDER BY comments.creationdate DESC;
+SELECT id, title, type, created_at,
+       ROW_NUMBER() OVER (PARTITION BY type ORDER BY created_at) AS position
+FROM (
+    SELECT *, LEAD(type) OVER () AS ld, LAG(type) OVER () AS lg
+    FROM (
+        SELECT id, name AS title, 'badge' AS type, date AS created_at
+        FROM badges
+        WHERE userid = $user_id
+        UNION
+        SELECT id, title, 'post' AS type, creationdate AS created_at
+        FROM posts
+        WHERE owneruserid = $user_id
+        ORDER BY created_at
+    ) achievements
+) achievements
+WHERE (type = 'post' AND ld = 'badge') OR (type = 'badge' AND lg = 'post')
+ORDER BY created_at;
 ```
-Príklad pre `/v2/posts/1819157/users`:
+Príklad pre `/v3/users/120/badge_history`:
 
 ![1](examples/1.png)
 ### 2. endpoint
-Tento dopyt spája ID príspevkov, ktorých autorom je uvedený používateľ, a príspevkov, na ktorých ten komentoval, do jednej tabuľky pomocou subquery. Potom máme vnútorne spájané tabuľky používateľov a komentárov (aby sme mali len tych používateľov, ktorí majú nejaké komentáre) a spojíme ich s tabuľkou zo subquery cez INNER JOIN, aby sme dostali komentáre len na relevantných príspevkoch. Nakoniec usporiadame používateľov, začínajúc tými, ktorí sa zaregistrovali ako prví, a vyberáme potrebné údaje.
+...
 ```postgresql
-SELECT DISTINCT users.id, reputation, users.creationdate,
-                displayname, lastaccessdate, websiteurl,
-                location, aboutme, users.views,
-                upvotes, downvotes, profileimageurl,
-                age, accountid
-FROM users
-JOIN comments ON comments.userid = users.id
-JOIN (
-    SELECT posts.id
-    FROM posts
-    WHERE posts.owneruserid = $id
-    UNION
-    SELECT postid AS id
+SELECT *, ROUND(SUM(diff) OVER (PARTITION BY post_id ORDER BY created_at ROWS UNBOUNDED PRECEDING)
+                    / ROW_NUMBER() OVER (PARTITION BY post_id), 6) AS avg
+FROM (
+    SELECT p.post_id, p.title, users.displayname, comments.text,
+           comments.creationdate AS created_at, p.post_created_at,
+           ROUND(EXTRACT(EPOCH FROM (comments.creationdate -
+                               LAG(comments.creationdate, 1, p.post_created_at) OVER (PARTITION BY p.post_id ORDER BY comments.creationdate))
+           ), 6) AS diff
     FROM comments
-    WHERE comments.userid = $id
-) p ON comments.postid = p.id
-ORDER BY users.creationdate;
+    JOIN users ON users.id = comments.userid
+    JOIN (
+        SELECT posts.id AS post_id, posts.title AS title, posts.creationdate AS post_created_at
+        FROM posts
+        JOIN post_tags ON post_tags.post_id = posts.id
+        JOIN tags ON post_tags.tag_id = tags.id
+        JOIN comments ON posts.id = comments.postid
+        WHERE tags.tagname = $tagname
+        GROUP BY posts.id, posts.title, posts.creationdate
+        HAVING COUNT(comments.id) > $count
+    ) p ON p.post_id = comments.postid
+) p
+ORDER BY post_created_at, created_at;
 ```
-Príklad pre `/v2/users/1076348/friends`:
+Príklad pre `/v3/tags/networking/comments?count=40`:
 
-![2](examples/2.png)
+![2](examples/2.1.png)
+![2](examples/2.2.png)
 ### 3. endpoint
-Tento dopyt vyberie všetky príspevky (vrátane aj tých, ktoré nemajú žiadny tag) pomocou LEFT JOINov s tagmi. Potom vyráta percentuálne zastúpenie príspevkov s uvedeným tagom v ramci celkového počtu príspevkov vytvorených v jednotlivých dňoch týždňa v UTC+0 a zaokrúhli to na dva desatinné miesta pomocou funkcie ROUND.
+...
 ```postgresql
-SELECT EXTRACT(ISODOW FROM posts.creationdate AT TIME ZONE 'UTC') AS dayofweek,
-       ROUND(COUNT(*) FILTER (WHERE tagname = '$tag') * 100.0 / COUNT(DISTINCT posts.id), 2) AS ct
-FROM posts
-LEFT JOIN post_tags ON posts.id = post_tags.post_id
-LEFT JOIN tags ON post_tags.tag_id = tags.id
-GROUP BY dayofweek
-ORDER BY dayofweek;
+SELECT comments.id, users.displayname, p.body, comments.text, comments.score,
+       ARRAY_POSITION(comment_ids, comments.id) AS position
+FROM comments
+JOIN users ON users.id = comments.userid
+JOIN (
+    SELECT posts.id AS post_id, posts.body,
+           ARRAY_AGG(comments.id ORDER BY comments.creationdate) AS comment_ids
+    FROM posts
+    JOIN post_tags ON post_tags.post_id = posts.id
+    JOIN tags ON post_tags.tag_id = tags.id
+    JOIN comments ON posts.id = comments.postid
+    WHERE tags.tagname = $tagname
+    GROUP BY posts.id, posts.body, posts.creationdate
+    HAVING COUNT(*) >= $position
+    ORDER BY posts.creationdate
+    LIMIT $limit
+) p ON p.comment_ids[$position] = comments.id;
 ```
-Príklad pre `/v2/tags/linux/stats`:
+Príklad pre `/v3/tags/linux/comments/2?limit=1`:
 
 ![3](examples/3.png)
 ### 4. endpoint
-Dopyt pre 4. endpoint iba odfiltruje všetky príspevky, vyberie len majúce dátum uzavretia, vypočíta ich trvanie v minútach a takisto zaokrúhli na dva desatinné miesta. Nakoniec usporiada príspevky od najnovších a vyberie potrebné informácie o uvedenom počte príspevkov.
+...
 ```postgresql
-SELECT id, creationdate, viewcount, lasteditdate, lastactivitydate, title, closeddate,
-       ROUND(EXTRACT(EPOCH FROM (closeddate - creationdate)) / 60.0, 2) AS duration
+SELECT displayname, body, posts.creationdate AS created_at
 FROM posts
-WHERE closeddate IS NOT NULL AND ROUND(EXTRACT(EPOCH FROM (closeddate - creationdate)) / 60.0, 2) <= $minutes
-ORDER BY creationdate DESC
+JOIN users ON posts.owneruserid = users.id
+WHERE posts.id = $post_id OR posts.parentid = $post_id
+ORDER BY created_at
 LIMIT $limit;
 ```
-Príklad pre `/v2/posts?duration=5&limit=2`:
+Príklad pre `/v3/posts/2154?limit=2`:
 
 ![4](examples/4.png)
-### 5. endpoint
-Pre tento dopyt som spojil tabuľky príspevkov a tagov pomocou LEFT JOIN, aby zostali aj príspevky bez tagov. Potom som odfiltroval ich podľa toho, či sa nachádza daný reťazec bez diakritiky a malými písmenami buď v názve alebo obsahu príspevkov. Ďalej som použil agregáčnu funkciu ARRAY_AGG na spojenie všetkých tagov, ktoré patria jednotlivým príspevkom. Ak nemá príspevok žiadny tag, tak bude sa tam nachádzať prázdne pole. Konečne som zoradil výsledky podľa datumu vytvorenia príspevkov, obmedzil som ich počet uvedeným v endpointe a vybral som potrebné údaje.
-```postgresql
-SELECT posts.id, creationdate, viewcount, lasteditdate, lastactivitydate,
-       title, body, answercount, closeddate,
-       COALESCE(ARRAY_AGG(tagname) FILTER (WHERE tagname IS NOT NULL), ARRAY[]::TEXT[]) AS tags
-FROM posts
-LEFT JOIN post_tags ON posts.id = post_tags.post_id
-LEFT JOIN tags ON post_tags.tag_id = tags.id
-WHERE UNACCENT(title) ILIKE UNACCENT('%$query%')
-      OR UNACCENT(body) ILIKE UNACCENT('%$query%')
-GROUP BY posts.id, creationdate
-ORDER BY creationdate DESC
-LIMIT $limit;
-```
-Príklad pre `/v2/posts?limit=2&query=linux`:
-
-![5](examples/5.png)
