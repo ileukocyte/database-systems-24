@@ -53,6 +53,43 @@ FROM (
 ) p
 ORDER BY post_created_at, created_at;
 ```
+Použil som ten dopyt v zadaní, ale okrem toho som spravil aj ďalšiu modifikáciu, ktorá formatuje časové intervaly z výslednej tabuľky na úrovni SQL:
+```sql
+SELECT  post_id, title, displayname, text,
+        created_at, post_created_at, diff, CASE
+            WHEN TO_CHAR(avg, 'DD "days" HH24:MI:SS.MS') LIKE '0%' THEN
+                REPLACE(REPLACE(SUBSTRING(TO_CHAR(avg, 'DD "days" HH24:MI:SS.MS'), 2), '1 days ', '1 day '), '0 days ', '')
+            ELSE TO_CHAR(avg, 'DD "days" HH24:MI:SS.MS')
+        END AS avg
+FROM (
+    SELECT post_id, title, displayname, text,
+           created_at, post_created_at, CASE
+               WHEN TO_CHAR(diff, 'DD "days" HH24:MI:SS.MS') LIKE '0%' THEN
+                   REPLACE(REPLACE(SUBSTRING(TO_CHAR(diff, 'DD "days" HH24:MI:SS.MS'), 2), '1 days ', '1 day '), '0 days ', '')
+               ELSE TO_CHAR(diff, 'DD "days" HH24:MI:SS.MS')
+           END AS diff, SUM(diff) OVER (PARTITION BY post_id ORDER BY created_at ROWS UNBOUNDED PRECEDING)
+                            / ROW_NUMBER() OVER (PARTITION BY post_id) AS avg
+    FROM (
+        SELECT p.post_id, p.title, users.displayname, comments.text,
+               comments.creationdate AS created_at, p.post_created_at,
+               comments.creationdate - LAG(comments.creationdate, 1, p.post_created_at)
+                                       OVER (PARTITION BY p.post_id ORDER BY comments.creationdate) AS diff
+        FROM comments
+        JOIN users ON users.id = comments.userid
+        JOIN (
+            SELECT posts.id AS post_id, posts.title AS title, posts.creationdate AS post_created_at
+            FROM posts
+            JOIN post_tags ON post_tags.post_id = posts.id
+            JOIN tags ON post_tags.tag_id = tags.id
+            JOIN comments ON posts.id = comments.postid
+            WHERE tags.tagname = $tagname
+            GROUP BY posts.id, posts.title, posts.creationdate
+            HAVING COUNT(comments.id) > $count
+        ) p ON p.post_id = comments.postid
+    ) p
+    ORDER BY post_created_at, created_at
+) t;
+```
 Príklad pre `/v3/tags/networking/comments?count=40`:
 
 ![2](examples/2.1.png)
