@@ -1,7 +1,7 @@
 # Dokumentácia k zadaniu č. 3
-Oleksandr Oksanich, AIS ID: 122480
+**Riešiteľ**: Oleksandr Oksanich, AIS ID: 122480
 
-Cvičenie: Dubec-Bencel, utorok 11:00
+**Cvičenie**: Dubec-Bencel, utorok 11:00
 ## Endpointy
 ### 1. endpoint
 Tento dopyt funguje tak, že najprv spojí všetky príspevky a odznaky používateľa do jednej tabuľky cez `UNION` a zoradí to všetko podľa dátumu vytvorenia/získania. Potom na účely správneho párovania pridá druh (príspevok/odznaka) predchádzajúceho a nasledujúceho prvkov. Ďalej nechá iba tie príspevky, po ktorých nasleduje odznaka, resp. iba tie odznaky, pred ktorými je nejaky príspevok. Nakoniec pridá stĺpec "position" pomocou funkcie `ROW_NUMBER()`, ktora sa priradí každému páru post-badge vďaka príkazu `PARTITION BY type`, a zoradí sa celá výsledná tabuľka podľa dátumu vytvorenia prvkov.
@@ -39,7 +39,7 @@ FROM (
                                LAG(comments.creationdate, 1, p.post_created_at) OVER (PARTITION BY p.post_id ORDER BY comments.creationdate))
            ), 6) AS diff
     FROM comments
-    JOIN users ON users.id = comments.userid
+    LEFT JOIN users ON users.id = comments.userid
     JOIN (
         SELECT posts.id AS post_id, posts.title AS title, posts.creationdate AS post_created_at
         FROM posts
@@ -55,12 +55,12 @@ ORDER BY post_created_at, created_at;
 ```
 Použil som ten dopyt v zadaní, ale okrem toho som spravil aj ďalšiu modifikáciu, ktorá formatuje časové intervaly z výslednej tabuľky na úrovni SQL:
 ```sql
-SELECT  post_id, title, displayname, text,
-        created_at, post_created_at, diff, CASE
-            WHEN TO_CHAR(avg, 'DD "days" HH24:MI:SS.MS') LIKE '0%' THEN
-                REPLACE(REPLACE(SUBSTRING(TO_CHAR(avg, 'DD "days" HH24:MI:SS.MS'), 2), '1 days ', '1 day '), '0 days ', '')
-            ELSE TO_CHAR(avg, 'DD "days" HH24:MI:SS.MS')
-        END AS avg
+SELECT post_id, title, displayname, text,
+       created_at, post_created_at, diff, CASE
+           WHEN TO_CHAR(avg, 'DD "days" HH24:MI:SS.MS') LIKE '0%' THEN
+               REPLACE(REPLACE(SUBSTRING(TO_CHAR(avg, 'DD "days" HH24:MI:SS.MS'), 2), '1 days ', '1 day '), '0 days ', '')
+           ELSE TO_CHAR(avg, 'DD "days" HH24:MI:SS.MS')
+       END AS avg
 FROM (
     SELECT post_id, title, displayname, text,
            created_at, post_created_at, CASE
@@ -75,7 +75,7 @@ FROM (
                comments.creationdate - LAG(comments.creationdate, 1, p.post_created_at)
                                        OVER (PARTITION BY p.post_id ORDER BY comments.creationdate) AS diff
         FROM comments
-        JOIN users ON users.id = comments.userid
+        LEFT JOIN users ON users.id = comments.userid
         JOIN (
             SELECT posts.id AS post_id, posts.title AS title, posts.creationdate AS post_created_at
             FROM posts
@@ -95,12 +95,12 @@ Príklad pre `/v3/tags/networking/comments?count=40`:
 ![2](examples/2.1.png)
 ![2](examples/2.2.png)
 ### 3. endpoint
-Dopyt pre túto úlohu najprv odfiltruje všetky príspevky, ktoré majú uvedený tag a aspoň _n_ komentárov (lebo ich musíme mať, keď chceme vypísať každý n-ty komentár pre príspevok). Taktiež každý príspevok vráti aj pole ID všetkých komentárov zoradené podľa dátumu ich vytvorenia a vytvorené pomocou agregáčnej funkcie `ARRAY_AGG()`. Nakoniec spraví `INNER JOIN` s tabuľkou používateľov kvôli stĺpcu "displayname" a vyberie n-ty komentár pre každý relevantný príspevok z poľa podľa poskytnutého indexu.
+Dopyt pre túto úlohu najprv odfiltruje všetky príspevky, ktoré majú uvedený tag a aspoň _n_ komentárov (lebo ich musíme mať, keď chceme vypísať každý n-ty komentár pre príspevok). Taktiež každý príspevok vráti aj pole ID všetkých komentárov zoradené podľa dátumu ich vytvorenia a vytvorené pomocou agregáčnej funkcie `ARRAY_AGG()`. Nakoniec spraví `LEFT JOIN` s tabuľkou používateľov kvôli stĺpcu "displayname" a vyberie n-ty komentár pre každý relevantný príspevok z poľa podľa poskytnutého indexu.
 ```sql
 SELECT comments.id, users.displayname, p.body, comments.text, comments.score,
        ARRAY_POSITION(comment_ids, comments.id) AS position
 FROM comments
-JOIN users ON users.id = comments.userid
+LEFT JOIN users ON users.id = comments.userid
 JOIN (
     SELECT posts.id AS post_id, posts.body,
            ARRAY_AGG(comments.id ORDER BY comments.creationdate) AS comment_ids

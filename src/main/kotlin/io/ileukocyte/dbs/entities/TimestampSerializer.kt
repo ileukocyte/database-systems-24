@@ -14,7 +14,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 object TimestampSerializer : KSerializer<Timestamp> {
-    private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSxx")
+    private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSx") // xxx
 
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("java.sql.Timestamp", PrimitiveKind.STRING)
 
