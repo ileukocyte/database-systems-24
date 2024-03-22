@@ -4,7 +4,7 @@
 **Cvičenie**: Dubec-Bencel, utorok 11:00
 ## Endpointy
 ### 1. endpoint
-Tento dopyt funguje tak, že najprv spojí všetky príspevky a odznaky používateľa do jednej tabuľky cez `UNION` a zoradí to všetko podľa dátumu vytvorenia/získania. Potom na účely správneho párovania pridá druh (príspevok/odznaka) predchádzajúceho a nasledujúceho prvkov. Ďalej nechá iba tie príspevky, po ktorých nasleduje odznaka, resp. iba tie odznaky, pred ktorými je nejaky príspevok. Nakoniec pridá stĺpec "position" pomocou funkcie `ROW_NUMBER()`, ktora sa priradí každému páru post-badge vďaka príkazu `PARTITION BY type`, a zoradí sa celá výsledná tabuľka podľa dátumu vytvorenia prvkov.
+Tento dopyt funguje tak, že najprv spojí všetky príspevky a odznaky používateľa do jednej tabuľky cez `UNION` a zoradí to všetko podľa dátumu vytvorenia/získania (a mena). Potom na účely správneho párovania pridá druh (príspevok/odznaka) predchádzajúceho a nasledujúceho prvkov. Ďalej nechá iba tie príspevky, po ktorých nasleduje odznaka, resp. iba tie odznaky, pred ktorými je nejaky príspevok. Nakoniec pridá stĺpec "position" pomocou funkcie `ROW_NUMBER()`, ktora sa priradí každému páru post-badge vďaka príkazu `PARTITION BY type`, a zoradí sa celá výsledná tabuľka podľa dátumu vytvorenia prvkov a ich mena.
 ```sql
 SELECT id, title, type, created_at,
        ROW_NUMBER() OVER (PARTITION BY type ORDER BY created_at) AS position
@@ -18,11 +18,11 @@ FROM (
         SELECT id, title, 'post' AS type, creationdate AS created_at
         FROM posts
         WHERE owneruserid = $user_id
-        ORDER BY created_at
+        ORDER BY created_at, title
     ) achievements
 ) achievements
 WHERE (type = 'post' AND ld = 'badge') OR (type = 'badge' AND lg = 'post')
-ORDER BY created_at;
+ORDER BY created_at, title;
 ```
 Príklad pre `/v3/users/120/badge_history`:
 

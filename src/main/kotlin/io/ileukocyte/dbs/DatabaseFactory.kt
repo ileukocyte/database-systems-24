@@ -46,11 +46,11 @@ object DatabaseFactory {
                         SELECT id, title, 'post' AS type, creationdate AS created_at
                         FROM posts
                         WHERE owneruserid = ?
-                        ORDER BY created_at
+                        ORDER BY created_at, title
                     ) achievements
                 ) achievements
                 WHERE (type = 'post' AND ld = 'badge') OR (type = 'badge' AND lg = 'post')
-                ORDER BY created_at;
+                ORDER BY created_at, title;
             """.trimIndent()
             val params = listOf(IntegerColumnType() to userId, IntegerColumnType() to userId)
 
