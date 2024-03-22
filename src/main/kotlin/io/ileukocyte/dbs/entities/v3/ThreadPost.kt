@@ -10,7 +10,7 @@ import java.sql.Timestamp
 @Serializable
 data class ThreadPost(
     @SerialName("displayname")
-    val displayName: String,
+    val displayName: String?,
     val body: String?,
     @[SerialName("created_at") Serializable(with = TimestampSerializer::class)]
     val createdAt: Timestamp

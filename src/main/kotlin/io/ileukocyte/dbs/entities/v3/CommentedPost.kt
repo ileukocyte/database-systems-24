@@ -13,7 +13,7 @@ data class CommentedPost(
     val postId: Int,
     val title: String?,
     @SerialName("displayname")
-    val displayName: String,
+    val displayName: String?,
     val text: String,
     @[SerialName("post_created_at") Serializable(with = TimestampSerializer::class)]
     val postCreatedAt: Timestamp,

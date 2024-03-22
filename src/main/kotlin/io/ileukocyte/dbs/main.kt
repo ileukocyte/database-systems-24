@@ -57,7 +57,7 @@ fun Application.configureRouting() {
                     val output = DatabaseFactory.getPostsByComments(tag, count)
                     val json = prettyJson.encodeToString(
                         MapSerializer(String.serializer(), ListSerializer(CommentedPost.serializer())),
-                        mapOf("result" to output)
+                        mapOf("items" to output)
                     )
 
                     call.respondText(json, ContentType.Application.Json)
@@ -76,7 +76,7 @@ fun Application.configureRouting() {
                     val output = DatabaseFactory.getTaggedPostComments(tag, position, limit)
                     val json = prettyJson.encodeToString(
                         MapSerializer(String.serializer(), ListSerializer(TaggedPostComment.serializer())),
-                        mapOf("result" to output)
+                        mapOf("items" to output)
                     )
 
                     call.respondText(json, ContentType.Application.Json)
@@ -94,7 +94,7 @@ fun Application.configureRouting() {
                 val output = DatabaseFactory.getPostThread(id, limit)
                 val json = prettyJson.encodeToString(
                     MapSerializer(String.serializer(), ListSerializer(ThreadPost.serializer())),
-                    mapOf("result" to output)
+                    mapOf("items" to output)
                 )
 
                 call.respondText(json, ContentType.Application.Json)

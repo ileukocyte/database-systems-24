@@ -81,7 +81,7 @@ object DatabaseFactory {
                                                LAG(comments.creationdate, 1, p.post_created_at) OVER (PARTITION BY p.post_id ORDER BY comments.creationdate))
                            ), 6) AS diff
                     FROM comments
-                    JOIN users ON users.id = comments.userid
+                    LEFT JOIN users ON users.id = comments.userid
                     JOIN (
                         SELECT posts.id AS post_id, posts.title AS title, posts.creationdate AS post_created_at
                         FROM posts
@@ -134,7 +134,7 @@ object DatabaseFactory {
                 SELECT comments.id, users.displayname, p.body, comments.text, comments.score,
                        ARRAY_POSITION(comment_ids, comments.id) AS position
                 FROM comments
-                JOIN users ON users.id = comments.userid
+                LEFT JOIN users ON users.id = comments.userid
                 JOIN (
                     SELECT posts.id AS post_id, posts.body,
                            ARRAY_AGG(comments.id ORDER BY comments.creationdate) AS comment_ids

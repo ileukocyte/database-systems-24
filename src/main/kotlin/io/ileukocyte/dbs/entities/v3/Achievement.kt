@@ -21,6 +21,6 @@ data class Achievement(
         @SerialName("badge")
         BADGE,
         @SerialName("post")
-        POST
+        POST,
     }
 }

@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 data class TaggedPostComment(
     val id: Int,
     @SerialName("displayname")
-    val displayName: String,
+    val displayName: String?,
     val body: String,
     val text: String,
     val score: Int,
